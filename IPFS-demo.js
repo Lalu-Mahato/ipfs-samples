@@ -3,6 +3,7 @@ const http = require('http');
 const express = require('express');
 const multer = require('multer')
 const fs = require('fs');
+const bluebird = require('bluebird');
 const ipfsClient = require('ipfs-http-client');
 
 const app = express();
@@ -38,6 +39,27 @@ app.post('/profile', upload.single('avatar'), async (req, res, next) => {
     }, 1000);
 
     res.send('file uploaded');
+});
+
+app.post('/upload', upload.single('avatar'), async (req, res) => {
+    try {
+        let data = Buffer.from(fs.readFileSync(req.file.path));
+
+        return new bluebird((resolve, reject) => {
+            client.add(data).then((response) => {
+                resolve(response)
+            });
+            fs.unlinkSync(req.file.path);
+        })
+            .then((x) => {
+                return res.send(x.path);
+            })
+            .catch((err) => {
+                res.send({ Error: err });
+            });
+    } catch (err) {
+        console.log(err);
+    }
 });
 
 app.get('/download/:ID', function (req, res) {
